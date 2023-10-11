@@ -12,7 +12,6 @@ knitr::opts_chunk$set(
 #                           nlambda3=10,lambda3_max=3.5,lambda3_min=0.5)
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  set.seed(1)
 #  res <- GGMPF(lambda, example.data$data, K, penalty = "MCP")
 #  Theta_hat.list <- res$Theta_hat.list
 #  Mu_hat.list <- res$Mu_hat.list
@@ -27,9 +26,7 @@ knitr::opts_chunk$set(
 #  summ$Theta_summary$overlap
 #  va_names <- c("6")
 #  linked_node_names(summ, va_names, num_subgroup=1)
-#  par(mfrow=c(1,K_hat))
-#  set.seed(12)
-#  plot_network(summ, num_subgroup = c(1:K_hat))
+#  plot_network(summ, num_subgroup = c(1:K_hat), plot.mfrow=c(1,K_hat))
 
 ## ----eval=FALSE---------------------------------------------------------------
 #  data(example.data)

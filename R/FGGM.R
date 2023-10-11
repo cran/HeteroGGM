@@ -3,9 +3,9 @@
 #' @author Mingyang Ren, Sanguo Zhang, Qingzhao Zhang, Shuangge Ma. Maintainer: Mingyang Ren <renmingyang17@mails.ucas.ac.cn>.
 #' @references Ren, M., Zhang S., Zhang Q. and Ma S. (2020). Gaussian Graphical Model-based Heterogeneity Analysis via Penalized Fusion. Biometrics, Published Online.
 #' @usage FGGM(data, K, lambda1 = 0.5, lambda2 = 0.2, lambda3 = 2, a = 3, rho = 1,
-#'             eps = 5e-2, niter = 20, maxiter=10, maxiter.AMA=5, initialization=TRUE,
-#'             initialize, average=FALSE, asymmetric=TRUE, local_appro=TRUE,
-#'             penalty = "MCP", theta.fusion=TRUE)
+#'             eps = 5e-2, niter = 20, maxiter=10, maxiter.AMA=5, initialization=T,
+#'             initialize, average=F, asymmetric=T, local_appro=T,
+#'             penalty = "MCP", theta.fusion=T)
 #'
 #' @description The base function of Gaussian graphical model-based heterogeneity analysis via penalized fusion: identifying the order of subgroups and reconstructing the network structure.
 #' @param data n * p matrix, the design matrix.
@@ -30,10 +30,47 @@
 #' @return A list including all estimated parameters and the BIC value.
 #' @export
 #'
+#' @examples
+#' \donttest{
+#' n <- 200              # The sample size of each subgroup
+#' p <- 20               # The dimension of the precision matrix
+#' K0 <- 3               # The true number of subgroups
+#' N <- rep(n,K0)        # The sample sizes of K0 subgroups
+#' K <- 6                # The given upper bound of K0.
+#'
+#' ################ The true parameters ################
+#' mue <- 1.5
+#' nonnum <- 4
+#' mu01 <- c(rep(mue,nonnum),rep(-mue,nonnum),rep(0,p-2*nonnum))
+#' mu02 <- c(rep(mue,2*nonnum),rep(0,p-2*nonnum))
+#' mu03 <- c(rep(-mue,2*nonnum),rep(0,p-2*nonnum))
+#'
+#' # Power law network
+#' set.seed(2)
+#' A.list <- Power.law.network(p,s=5,I2=c(1),I3=c(2))
+#' Theta01 <- A.list$A1
+#' Theta02 <- A.list$A2
+#' Theta03 <- A.list$A3
+#' sigma01 <- solve(Theta01)
+#' sigma02 <- solve(Theta02)
+#' sigma03 <- solve(Theta03)
+#' Mu0.list <- list(mu01,mu02,mu03)
+#' Sigma0.list <- list(sigma01,sigma02,sigma03)
+#' Theta0.list <- list(Theta01,Theta02,Theta03)
+#'
+#' ################ Generating simulated data ################
+#' whole.data <- generate.data(N,Mu0.list,Theta0.list,Sigma0.list)
+#'
+#' PP = FGGM(whole.data$data, K, lambda1 = 0.22, lambda2 = 0.12, lambda3 = 1.83)
+#' mu_hat=PP$mu; Theta_hat=PP$Xi; L.mat = PP$L.mat0
+#' group = PP$group; prob = PP$prob0; bic = PP$bic; member = PP$member
+#' K0_hat = as.numeric(dim(Theta_hat)[3])
+#' K0_hat
+#' }
 #'
 FGGM <- function(data, K, lambda1 = 0.5, lambda2 = 0.2, lambda3 = 2, a = 3, rho = 1,
-                eps = 5e-2, niter = 20, maxiter=10, maxiter.AMA=5, initialization=TRUE, initialize,
-                average=FALSE, asymmetric=TRUE, local_appro=TRUE, penalty = "MCP", theta.fusion=TRUE){
+                eps = 5e-2, niter = 20, maxiter=10, maxiter.AMA=5, initialization=T, initialize,
+                average=F, asymmetric=T, local_appro=T, penalty = "MCP", theta.fusion=T){
 
   ## ------------------------------------------------------------------------------------------------------------------------------------------
   ## The name of the function: FGGM
@@ -207,8 +244,8 @@ FGGM <- function(data, K, lambda1 = 0.5, lambda2 = 0.2, lambda3 = 2, a = 3, rho 
   for (l in 1:K_0) {
     gg = group_final[[l]]
     prob0[l] = sum(prob[gg])
+    L.mat0[,l] = apply(as.matrix(L.mat[,gg]),1,sum)
     if(length(gg) > 1){
-      L.mat0[,l] = apply(L.mat[,gg],1,sum)
       mu_final[l,] = apply(mu[gg,],2,mean)
 
       if(!average){
@@ -223,7 +260,7 @@ FGGM <- function(data, K, lambda1 = 0.5, lambda2 = 0.2, lambda3 = 2, a = 3, rho 
         }
       }
 
-    }else{ mu_final[l,] = mu[gg,]; Theta_final[,,l] = Theta[,,gg]; Xi_final[,,l] = Xi[,,gg]; L.mat0 = matrix(1,n,K_0) }
+    }else{ mu_final[l,] = mu[gg,]; Theta_final[,,l] = Theta[,,gg]; Xi_final[,,l] = Xi[,,gg] }
   }
 
   if(asymmetric){
@@ -234,8 +271,8 @@ FGGM <- function(data, K, lambda1 = 0.5, lambda2 = 0.2, lambda3 = 2, a = 3, rho 
   }
 
   Theta_final[abs(Theta_final) < 1e-3] <- 0
-  member = apply(L.mat,1,function(a){which(a == max(a))[1]})
-  BIC.res = BIC(data, mu_final, Xi_final, L.mat)
+  member = apply(L.mat0,1,function(a){which(a == max(a))[1]})
+  BIC.res = BIC(data, mu_final, Xi_final, L.mat0)
 
   FGGM_res <- list();FGGM_res$mu <-  mu_final;FGGM_res$Theta <- Theta_final
   FGGM_res$Xi <- Xi_final; FGGM_res$niter <- t; FGGM_res$diff_Xi <- V_kk

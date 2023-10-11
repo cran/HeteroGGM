@@ -1,5 +1,5 @@
 AMA_XI = function(B, K_c, lambda2, lambda3, mu_kk_diff, a = 3,
-                  kappa=1, maxiter=5, tol=1e-2, penalty="MCP", theta.fusion=TRUE){
+                  kappa=1, maxiter=5, tol=1e-2, penalty="MCP", theta.fusion=T){
 
   ## ------------------------------------------------------------------------------------------------------------------------------------------
   ## The name of the function: AMA_XI

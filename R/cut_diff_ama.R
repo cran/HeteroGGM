@@ -47,7 +47,7 @@ cut_diff_ama <- function(V_kk,K_c,K,cutoff=0.01){
           }
         }
         if(length(k_del) > 0){
-          for (j in sort(k_del,decreasing = TRUE)) {
+          for (j in sort(k_del,decreasing = T)) {
             K_group[[j]] = NULL
           }
         }

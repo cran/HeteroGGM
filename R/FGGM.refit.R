@@ -4,8 +4,8 @@
 #' @references Ren, M., Zhang S., Zhang Q. and Ma S. (2020). Gaussian Graphical Model-based Heterogeneity Analysis via Penalized Fusion. Biometrics, Published Online.
 #' @usage FGGM.refit(data, K, lambda1 = 0.5, lambda2 = 0.2, lambda3 = 2, a = 3, rho = 1,
 #'                   eps = 5e-2, niter = 20, maxiter=10, maxiter.AMA=5,
-#'                   initialization=TRUE, initialize, average=FALSE,
-#'                   asymmetric=TRUE, local_appro=TRUE, penalty = "MCP", theta.fusion=TRUE)
+#'                   initialization=T, initialize, average=F,
+#'                   asymmetric=T, local_appro=T, penalty = "MCP", theta.fusion=T)
 #' @description Refitting when K0 is identified using FGGM().
 #' @param data n * p matrix, the design matrix.
 #' @param K Int, a selected upper bound of K_0.
@@ -29,10 +29,46 @@
 #' @return A list including all estimated parameters and the BIC value after refitting.
 #' @export
 #'
+#' @examples
+#' \donttest{
+#' n <- 200              # The sample size of each subgroup
+#' p <- 20               # The dimension of the precision matrix
+#' K0 <- 3               # The true number of subgroups
+#' N <- rep(n,K0)        # The sample sizes of K0 subgroups
+#' K <- 6                # The given upper bound of K0.
+#'
+#' ################ The true parameters ################
+#' mue <- 1.5
+#' nonnum <- 4
+#' mu01 <- c(rep(mue,nonnum),rep(-mue,nonnum),rep(0,p-2*nonnum))
+#' mu02 <- c(rep(mue,2*nonnum),rep(0,p-2*nonnum))
+#' mu03 <- c(rep(-mue,2*nonnum),rep(0,p-2*nonnum))
+#' # Power law network
+#' set.seed(2)
+#' A.list <- Power.law.network(p,s=5,I2=c(1),I3=c(2))
+#' Theta01 <- A.list$A1
+#' Theta02 <- A.list$A2
+#' Theta03 <- A.list$A3
+#' sigma01 <- solve(Theta01)
+#' sigma02 <- solve(Theta02)
+#' sigma03 <- solve(Theta03)
+#' Mu0.list <- list(mu01,mu02,mu03)
+#' Sigma0.list <- list(sigma01,sigma02,sigma03)
+#' Theta0.list <- list(Theta01,Theta02,Theta03)
+#'
+#' ################ Generating simulated data ################
+#' whole.data <- generate.data(N,Mu0.list,Theta0.list,Sigma0.list)
+#'
+#' PP = FGGM.refit(whole.data$data, K, lambda1 = 0.22, lambda2 = 0.12, lambda3 = 1.83)
+#' mu_hat=PP$mu; Theta_hat=PP$Xi; L.mat = PP$L.mat0
+#' group = PP$group; prob = PP$prob0; bic = PP$bic; member = PP$member
+#' K0_hat = as.numeric(dim(Theta_hat)[3])
+#' K0_hat
+#' }
 #'
 FGGM.refit = function(data, K, lambda1 = 0.5, lambda2 = 0.2, lambda3 = 2, a = 3, rho = 1,
-                      eps = 5e-2, niter = 20, maxiter=10, maxiter.AMA=5, initialization=TRUE, initialize,
-                      average=FALSE, asymmetric=TRUE, local_appro=TRUE, penalty = "MCP", theta.fusion=TRUE){
+                      eps = 5e-2, niter = 20, maxiter=10, maxiter.AMA=5, initialization=T, initialize,
+                      average=F, asymmetric=T, local_appro=T, penalty = "MCP", theta.fusion=T){
 
   ## ------------------------------------------------------------------------------------------------------------------------------------------
   ## The name of the function: FGGM.refit
@@ -84,6 +120,7 @@ FGGM.refit = function(data, K, lambda1 = 0.5, lambda2 = 0.2, lambda3 = 2, a = 3,
   ## @ df: a float value, the penalty value for non-zero parameters corresponding the choice of given tuning parameters.
   ## ------------------------------------------------------------------------------------------------------------------------------------------
 
+  set.seed(1)
   PP = FGGM(data, K, lambda1, lambda2, lambda3, eps=eps, maxiter=maxiter, maxiter.AMA=maxiter.AMA,
             initialization=initialization, initialize=initialize, average=average,
             asymmetric=asymmetric, local_appro=local_appro, penalty = penalty, theta.fusion=theta.fusion)
@@ -91,8 +128,9 @@ FGGM.refit = function(data, K, lambda1 = 0.5, lambda2 = 0.2, lambda3 = 2, a = 3,
   if(K_hat == 1){
     return(PP)
   } else {
+    set.seed(1)
     PP.refit = FGGM(data, K_hat, lambda1, lambda2, 0, eps=eps, maxiter=maxiter, maxiter.AMA=maxiter.AMA,
-                    initialization=TRUE, initialize=initialize, average=average,
+                    initialization=T, initialize=initialize, average=average,
                     asymmetric=asymmetric, local_appro=local_appro, penalty = penalty, theta.fusion=theta.fusion)
   }
   return(PP.refit)

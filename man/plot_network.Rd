@@ -4,7 +4,7 @@
 \alias{plot_network}
 \title{Visualization of network structures.}
 \usage{
-plot_network(summ, num_subgroup = 1,
+plot_network(summ, num_subgroup = 1, plot.mfrow,
                     vertex.size=2,vertex.label.cex=0.7,
                     vertex.label.dist=0.75, edge.width = 0.1, l=0)
 }
@@ -12,6 +12,8 @@ plot_network(summ, num_subgroup = 1,
 \item{summ}{A list, the summary of the resulting network structures.}
 
 \item{num_subgroup}{Int/vector, the subgroup numbering.}
+
+\item{plot.mfrow}{Figure Layout.}
 
 \item{vertex.size}{The vertex size.}
 

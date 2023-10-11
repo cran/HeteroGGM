@@ -6,8 +6,8 @@
 \usage{
 FGGM.refit(data, K, lambda1 = 0.5, lambda2 = 0.2, lambda3 = 2, a = 3, rho = 1,
                   eps = 5e-2, niter = 20, maxiter=10, maxiter.AMA=5,
-                  initialization=TRUE, initialize, average=FALSE,
-                  asymmetric=TRUE, local_appro=TRUE, penalty = "MCP", theta.fusion=TRUE)
+                  initialization=T, initialize, average=F,
+                  asymmetric=T, local_appro=T, penalty = "MCP", theta.fusion=T)
 }
 \arguments{
 \item{data}{n * p matrix, the design matrix.}
@@ -51,6 +51,44 @@ A list including all estimated parameters and the BIC value after refitting.
 }
 \description{
 Refitting when K0 is identified using FGGM().
+}
+\examples{
+\donttest{
+n <- 200              # The sample size of each subgroup
+p <- 20               # The dimension of the precision matrix
+K0 <- 3               # The true number of subgroups
+N <- rep(n,K0)        # The sample sizes of K0 subgroups
+K <- 6                # The given upper bound of K0.
+
+################ The true parameters ################
+mue <- 1.5
+nonnum <- 4
+mu01 <- c(rep(mue,nonnum),rep(-mue,nonnum),rep(0,p-2*nonnum))
+mu02 <- c(rep(mue,2*nonnum),rep(0,p-2*nonnum))
+mu03 <- c(rep(-mue,2*nonnum),rep(0,p-2*nonnum))
+# Power law network
+set.seed(2)
+A.list <- Power.law.network(p,s=5,I2=c(1),I3=c(2))
+Theta01 <- A.list$A1
+Theta02 <- A.list$A2
+Theta03 <- A.list$A3
+sigma01 <- solve(Theta01)
+sigma02 <- solve(Theta02)
+sigma03 <- solve(Theta03)
+Mu0.list <- list(mu01,mu02,mu03)
+Sigma0.list <- list(sigma01,sigma02,sigma03)
+Theta0.list <- list(Theta01,Theta02,Theta03)
+
+################ Generating simulated data ################
+whole.data <- generate.data(N,Mu0.list,Theta0.list,Sigma0.list)
+
+PP = FGGM.refit(whole.data$data, K, lambda1 = 0.22, lambda2 = 0.12, lambda3 = 1.83)
+mu_hat=PP$mu; Theta_hat=PP$Xi; L.mat = PP$L.mat0
+group = PP$group; prob = PP$prob0; bic = PP$bic; member = PP$member
+K0_hat = as.numeric(dim(Theta_hat)[3])
+K0_hat
+}
+
 }
 \references{
 Ren, M., Zhang S., Zhang Q. and Ma S. (2020). Gaussian Graphical Model-based Heterogeneity Analysis via Penalized Fusion. Biometrics, Published Online.

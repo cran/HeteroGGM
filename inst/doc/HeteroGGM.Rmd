@@ -89,7 +89,6 @@ lambda <- genelambda.obo(nlambda1=5,lambda1_max=0.5,lambda1_min=0.1,
 
 Apply GGMPF to the data.
 ```{r eval=FALSE}
-set.seed(1)
 res <- GGMPF(lambda, example.data$data, K, penalty = "MCP")
 Theta_hat.list <- res$Theta_hat.list
 Mu_hat.list <- res$Mu_hat.list
@@ -106,9 +105,7 @@ summ <- summary_network(opt_Mu_hat, opt_Theta_hat, example.data$data)
 summ$Theta_summary$overlap
 va_names <- c("6")
 linked_node_names(summ, va_names, num_subgroup=1)
-par(mfrow=c(1,K_hat))
-set.seed(12)
-plot_network(summ, num_subgroup = c(1:K_hat))
+plot_network(summ, num_subgroup = c(1:K_hat), plot.mfrow=c(1,K_hat))
 ```
 ![](example.png)
 

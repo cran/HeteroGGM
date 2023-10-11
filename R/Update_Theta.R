@@ -1,5 +1,5 @@
 Update_Theta = function(S, nK, lambda2, lambda3, mu_kk_diff, K_c, a = 3, rho=1,
-                        maxiter=10, maxiter.AMA=5, tol=1e-2, rho.increment=1, penalty="MCP", theta.fusion=TRUE){
+                        maxiter=10, maxiter.AMA=5, tol=1e-2, rho.increment=1, penalty="MCP", theta.fusion=T){
 
   ## ------------------------------------------------------------------------------------------------------------------------------------------
   ## The name of the function: Update_Theta

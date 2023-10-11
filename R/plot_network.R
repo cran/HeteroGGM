@@ -1,12 +1,13 @@
 #' Visualization of network structures.
 #'
 #' @name plot_network
-#' @usage plot_network(summ, num_subgroup = 1,
+#' @usage plot_network(summ, num_subgroup = 1, plot.mfrow,
 #'                     vertex.size=2,vertex.label.cex=0.7,
 #'                     vertex.label.dist=0.75, edge.width = 0.1, l=0)
 #'
 #' @param summ A list, the summary of the resulting network structures.
 #' @param num_subgroup Int/vector, the subgroup numbering.
+#' @param plot.mfrow Figure Layout.
 #' @param vertex.size The vertex size.
 #' @param vertex.label.cex The vertex label size.
 #' @param vertex.label.dist The distance of vertex labels.
@@ -17,7 +18,7 @@
 #' @export
 #' @importFrom graphics par
 #'
-plot_network <- function(summ, num_subgroup = 1,
+plot_network <- function(summ, num_subgroup = 1, plot.mfrow,
                          vertex.size=2,vertex.label.cex=0.7,
                          vertex.label.dist=0.75, edge.width = 0.1, l=0){
 
@@ -53,12 +54,13 @@ plot_network <- function(summ, num_subgroup = 1,
     network.joint = network.joint + network.list[[k]]
   }
   network.joint[which(network.joint != 0)] <- 1
-
+  set.seed(12)
   net.plot = graph_from_adjacency_matrix(network.joint,mode = "undirected",diag = FALSE)
   if(sum(abs(l))==0){
     l = layout.fruchterman.reingold(net.plot)
   }
 
+  par(mfrow = plot.mfrow)
   for (k in num_subgroup) {
     plot.igraph(net.plot.list[[k]],vertex.size=vertex.size,vertex.label.cex=vertex.label.cex,
                 vertex.label.dist=vertex.label.dist, layout = l, edge.width = edge.width)

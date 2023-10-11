@@ -1,11 +1,10 @@
 #' GGM-based heterogeneity analysis.
 #'
 #' @author Mingyang Ren, Sanguo Zhang, Qingzhao Zhang, Shuangge Ma. Maintainer: Mingyang Ren <renmingyang17@mails.ucas.ac.cn>.
-#' @references Ren, M., Zhang S., Zhang Q. and Ma S. (2020). Gaussian Graphical Model-based Heterogeneity Analysis via Penalized Fusion. Biometrics, Published Online, https://doi.org/10.1111/biom.13426.
-#' @usage GGMPF(lambda, data, K, initial.selection="K-means",
-#'              initialize, average=FALSE, asymmetric=TRUE,
-#'              eps = 5e-2, maxiter=10, maxiter.AMA=5, local_appro=TRUE,
-#'              trace = FALSE, penalty = "MCP", theta.fusion=TRUE)
+#' @references Ren, M., Zhang S., Zhang Q. and Ma S. (2022). Gaussian Graphical Model-based Heterogeneity Analysis via Penalized Fusion. Biometrics.
+#' @usage GGMPF(lambda, data, K, initial.selection="K-means", initialize, average=F,
+#'              asymmetric=T, eps = 5e-2, maxiter=10,
+#'              maxiter.AMA=5, local_appro=T, trace = F, penalty = "MCP", theta.fusion=T)
 #'
 #' @description The main function of Gaussian graphical model-based heterogeneity analysis via penalized fusion.
 #' @param lambda A list, the sequences of the tuning parameters (lambda1, lambda2, and lambda3).
@@ -25,13 +24,77 @@
 #'
 #' @return A list including all estimated parameters and the BIC values with all choices of given tuning parameters, and the selected optional parameters.
 #' @export
+#' @import huge Matrix MASS
 #' @importFrom stats cov cutree dist hclust kmeans median
 #' @importFrom utils combn
 #'
+#' @examples
+#' \donttest{
+#' ######## Example 1: Generate simulation data and apply this method to analysis #######
+#' n <- 200              # The sample size of each subgroup
+#' p <- 20               # The dimension of the precision matrix
+#' K0 <- 3               # The true number of subgroups
+#' N <- rep(n,K0)        # The sample sizes of K0 subgroups
+#' K <- 6                # The given upper bound of K0.
+#'
+#' ################ The true parameters ################
+#' mue <- 1.5
+#' nonnum <- 4
+#' mu01 <- c(rep(mue,nonnum),rep(-mue,nonnum),rep(0,p-2*nonnum))
+#' mu02 <- c(rep(mue,2*nonnum),rep(0,p-2*nonnum))
+#' mu03 <- c(rep(-mue,2*nonnum),rep(0,p-2*nonnum))
+#'
+#' # Power law network
+#' set.seed(2)
+#' A.list <- Power.law.network(p,s=5,I2=c(1),I3=c(2))
+#' Theta01 <- A.list$A1
+#' Theta02 <- A.list$A2
+#' Theta03 <- A.list$A3
+#' sigma01 <- solve(Theta01)
+#' sigma02 <- solve(Theta02)
+#' sigma03 <- solve(Theta03)
+#' Mu0.list <- list(mu01,mu02,mu03)
+#' Sigma0.list <- list(sigma01,sigma02,sigma03)
+#' Theta0.list <- list(Theta01,Theta02,Theta03)
+#'
+#' ################ Generating simulated data ################
+#' whole.data <- generate.data(N,Mu0.list,Theta0.list,Sigma0.list)
+#'
+#' ################ The implementation and evaluation ################
+#' lambda <- genelambda.obo(nlambda1=5,lambda1_max=0.5,lambda1_min=0.1,
+#'                          nlambda2=15,lambda2_max=1.5,lambda2_min=0.1,
+#'                          nlambda3=10,lambda3_max=3.5,lambda3_min=0.5)
+#' res <- GGMPF(lambda, whole.data$data, K, initial.selection="K-means")
+#' Theta_hat.list <- res$Theta_hat.list
+#' Mu_hat.list <- res$Mu_hat.list
+#' prob.list <- res$prob.list
+#' L.mat.list <- res$L.mat.list
+#' opt_num <- res$Opt_num
+#' opt_Theta_hat <- Theta_hat.list[[opt_num]]
+#' opt_Mu_hat <- Mu_hat.list[[opt_num]]
+#' opt_L.mat <- L.mat.list[[opt_num]]
+#' opt_prob <- prob.list[[opt_num]]
+#' K_hat <- dim(opt_Theta_hat)[3]
+#' K_hat
+#'
+#'
+#' ######## Example 2: Call the built-in simulation data set and analyze #######
+#' data(example.data)
+#' K <- 6
+#' lambda <- genelambda.obo(nlambda1=5,lambda1_max=0.5,lambda1_min=0.1,
+#'                          nlambda2=15,lambda2_max=1.5,lambda2_min=0.1,
+#'                          nlambda3=10,lambda3_max=3.5,lambda3_min=0.5)
+#' res <- GGMPF(lambda, example.data$data, K, initial.selection="K-means")
+#' Theta_hat.list <- res$Theta_hat.list
+#' opt_num <- res$Opt_num
+#' opt_Theta_hat <- Theta_hat.list[[opt_num]]
+#' K_hat <- dim(opt_Theta_hat)[3]
+#' K_hat
+#' }
 #'
 GGMPF <- function(lambda, data, K, initial.selection="K-means",
-                              initialize, average=FALSE, asymmetric=TRUE, eps = 5e-2, maxiter=10, maxiter.AMA=5,
-                              local_appro=TRUE, trace = FALSE, penalty = "MCP", theta.fusion=TRUE){
+                              initialize, average=F, asymmetric=T, eps = 5e-2, maxiter=10, maxiter.AMA=5,
+                              local_appro=T, trace = F, penalty = "MCP", theta.fusion=T){
 
   ## ------------------------------------------------------------------------------------------------------------------------------------------
   ## The name of the function: GGMPF
@@ -83,6 +146,7 @@ GGMPF <- function(lambda, data, K, initial.selection="K-means",
   n_all = dim(data)[1]
   # initialize
   if(initial.selection=="K-means"){
+    set.seed(1)
     out.initial = initialize_fuc(data,K)
     memb = out.initial$memb
     L.mat = matrix(0,n_all,K)
@@ -106,7 +170,7 @@ GGMPF <- function(lambda, data, K, initial.selection="K-means",
     L.mat.list = list()
     member.list = list()
     lam1 = lambda1;lam2 = lambda2;lam3 = lambda3;
-    PP = FGGM.refit(data, K, lam1, lam2, lam3, initialization=FALSE, initialize=out.initial, average=average,
+    PP = FGGM.refit(data, K, lam1, lam2, lam3, initialization=F, initialize=out.initial, average=average,
                     asymmetric=asymmetric, local_appro=local_appro, penalty = penalty, theta.fusion=theta.fusion)
     mu_hat=PP$mu;Theta_hat=PP$Xi;L.mat = PP$L.mat0;group = PP$group;prob = PP$prob0;aBIC[l] = PP$bic; member = PP$member
     Mu_hat.list[[l]]=mu_hat; Theta_hat.list[[l]]=Theta_hat; prob.list[[l]]=prob; L.mat.list[[l]] = L.mat; member.list[[l]]=member
@@ -120,7 +184,7 @@ GGMPF <- function(lambda, data, K, initial.selection="K-means",
     lam1 = median(lambda1);lam2 = median(lambda2)
     for (l in 1:L3) {
       lam3 = lambda3[l]
-      PP = FGGM.refit(data, K, lam1, lam2, lam3, initialization=FALSE, initialize=out.initial, average=average,
+      PP = FGGM.refit(data, K, lam1, lam2, lam3, initialization=F, initialize=out.initial, average=average,
                       asymmetric=asymmetric, local_appro=local_appro, penalty = penalty, theta.fusion=theta.fusion)
       mu_hat=PP$mu;Theta_hat=PP$Xi;L.mat = PP$L.mat0;group = PP$group;prob = PP$prob0;aBIC[l] = PP$bic; member = PP$member
       Mu_hat.list[[l]]=mu_hat; Theta_hat.list[[l]]=Theta_hat; prob.list[[l]]=prob; L.mat.list[[l]] = L.mat; member.list[[l]]=member
@@ -135,7 +199,7 @@ GGMPF <- function(lambda, data, K, initial.selection="K-means",
     # search lam2
     for (l2 in 1:L2) {
       lam2 = lambda2[l2];l = L3+l2
-      PP = FGGM.refit(data, K, lam1, lam2, lam3, initialization=FALSE, initialize=out.initial, average=average,
+      PP = FGGM.refit(data, K, lam1, lam2, lam3, initialization=F, initialize=out.initial, average=average,
                       asymmetric=asymmetric, local_appro=local_appro, penalty = penalty, theta.fusion=theta.fusion)
       mu_hat=PP$mu;Theta_hat=PP$Xi;L.mat = PP$L.mat0;group = PP$group;prob = PP$prob0;aBIC[l] = PP$bic; member = PP$member
       Mu_hat.list[[l]]=mu_hat; Theta_hat.list[[l]]=Theta_hat; prob.list[[l]]=prob; L.mat.list[[l]] = L.mat; member.list[[l]]=member
@@ -169,6 +233,15 @@ GGMPF <- function(lambda, data, K, initial.selection="K-means",
   n_lam = which(aBIC == min(aBIC))[1]
   Opt_aBIC = min(aBIC)
   Opt_lambda = c(lam1,lam2,lam3)
-  result = list(Opt_lambda=Opt_lambda,Mu_hat.list=Mu_hat.list,Theta_hat.list=Theta_hat.list,prob.list=prob.list,member.list=member.list,L.mat.list=L.mat.list,Opt_aBIC=Opt_aBIC,BIC=aBIC,Opt_num=n_lam)
+
+  result = list(Opt_lambda=Opt_lambda,Mu_hat.list=Mu_hat.list,Theta_hat.list=Theta_hat.list,
+                prob.list=prob.list,member.list=member.list,L.mat.list=L.mat.list,
+                Opt_aBIC=Opt_aBIC,BIC=aBIC,Opt_num=n_lam,
+                opt_Theta_hat=Theta_hat.list[[n_lam]],
+                opt_Mu_hat = Mu_hat.list[[n_lam]],
+                opt_member = member.list[[n_lam]],
+                opt_L.mat = L.mat.list[[n_lam]],
+                opt_prob = prob.list[[n_lam]],
+                K_hat = dim(Theta_hat.list[[n_lam]])[3])
   return(result)
 }
